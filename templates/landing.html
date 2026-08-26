@@ -20,7 +20,7 @@
             <a href="{{ url_for('register') }}" class="btn-primary">Start tracking free</a>
             <a href="{{ url_for('login') }}" class="btn-ghost">Sign in</a>
         </div>
-        <a href="#how-it-works" class="hero-how-it-works">See how it works ↓</a>
+        <a href="#how-it-works" class="btn-primary" id="how-it-works-trigger">See how it works</a>
     </div>
     <div class="hero-visual">
         <div class="mock-card">
@@ -90,4 +90,43 @@
     </div>
 </section>
 
+<div class="video-modal-overlay" id="video-modal-overlay">
+    <div class="video-modal">
+        <button type="button" class="video-modal-close" id="video-modal-close" aria-label="Close video">&times;</button>
+        <div class="video-modal-body">
+            <iframe id="video-modal-iframe" src="" title="How Spendly works" frameborder="0"
+                    allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var trigger = document.getElementById('how-it-works-trigger');
+        var overlay = document.getElementById('video-modal-overlay');
+        var closeBtn = document.getElementById('video-modal-close');
+        var iframe = document.getElementById('video-modal-iframe');
+        var videoUrl = 'https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=1';
+
+        function openModal(e) {
+            e.preventDefault();
+            iframe.src = videoUrl;
+            overlay.classList.add('active');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('active');
+            iframe.src = '';
+        }
+
+        trigger.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+    })();
+</script>
 {% endblock %}
