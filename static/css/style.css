@@ -174,6 +174,18 @@ a { color: inherit; text-decoration: none; }
     align-items: center;
 }
 
+.hero-how-it-works {
+    display: inline-block;
+    margin-top: 1.25rem;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.hero-how-it-works:hover { color: var(--ink); }
+
 /* ------------------------------------------------------------------ */
 /* Mock card (hero visual)                                             */
 /* ------------------------------------------------------------------ */
