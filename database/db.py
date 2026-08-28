@@ -1,5 +1,93 @@
-# Students will write this file in Step 1 — Database Setup
-# This file should contain:
-#   get_db()   — returns a SQLite connection with row_factory and foreign keys enabled
-#   init_db()  — creates all tables using CREATE TABLE IF NOT EXISTS
-#   seed_db()  — inserts sample data for development
+import os
+import sqlite3
+from datetime import date
+
+from werkzeug.security import generate_password_hash
+
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "expense_tracker.db",
+)
+
+
+def get_db():
+    """Open a new SQLite connection with row access by column name and FK enforcement."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
+def init_db():
+    """Create the users and expenses tables if they don't already exist."""
+    conn = get_db()
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            category TEXT NOT NULL,
+            date TEXT NOT NULL,
+            description TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def seed_db():
+    """Insert one demo user and 8 sample expenses, but only on an empty DB."""
+    conn = get_db()
+
+    row = conn.execute("SELECT COUNT(*) AS count FROM users").fetchone()
+    if row["count"] > 0:
+        conn.close()
+        return
+
+    password_hash = generate_password_hash("demo123")
+    cursor = conn.execute(
+        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+        ("Demo User", "demo@spendly.com", password_hash),
+    )
+    user_id = cursor.lastrowid
+
+    today = date.today()
+    y, m = today.year, today.month
+
+    sample_expenses = [
+        (450.00, "Food",          f"{y:04d}-{m:02d}-02", "Grocery shopping"),
+        (120.50, "Transport",     f"{y:04d}-{m:02d}-04", "Bus pass"),
+        (1500.00, "Bills",        f"{y:04d}-{m:02d}-05", "Electricity bill"),
+        (300.00, "Health",        f"{y:04d}-{m:02d}-08", "Pharmacy"),
+        (600.00, "Entertainment", f"{y:04d}-{m:02d}-10", "Movie night"),
+        (899.00, "Shopping",      f"{y:04d}-{m:02d}-14", "New shoes"),
+        (250.00, "Other",         f"{y:04d}-{m:02d}-18", "Miscellaneous purchase"),
+        (180.00, "Food",          f"{y:04d}-{m:02d}-22", "Restaurant dinner"),
+    ]
+
+    for amount, category, exp_date, description in sample_expenses:
+        conn.execute(
+            """
+            INSERT INTO expenses (user_id, amount, category, date, description)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, amount, category, exp_date, description),
+        )
+
+    conn.commit()
+    conn.close()
