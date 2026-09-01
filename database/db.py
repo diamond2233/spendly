@@ -119,3 +119,59 @@ def get_user_by_email(email):
     ).fetchone()
     conn.close()
     return user
+
+
+def get_user_by_id(user_id):
+    """Return the user row (id, name, email, created_at) matching user_id, or None if not found."""
+    conn = get_db()
+    user = conn.execute(
+        "SELECT id, name, email, created_at FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return user
+
+
+def get_expense_summary_by_user(user_id):
+    """Return a row with the expense count and total amount for user_id."""
+    conn = get_db()
+    summary = conn.execute(
+        "SELECT COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total FROM expenses WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return summary
+
+
+def get_category_totals_by_user(user_id):
+    """Return each category's total amount for user_id, highest total first."""
+    conn = get_db()
+    totals = conn.execute(
+        """
+        SELECT category, SUM(amount) AS total
+        FROM expenses
+        WHERE user_id = ?
+        GROUP BY category
+        ORDER BY total DESC
+        """,
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    return totals
+
+
+def get_recent_expenses_by_user(user_id, limit=5):
+    """Return the most recent `limit` expenses for user_id, newest first."""
+    conn = get_db()
+    expenses = conn.execute(
+        """
+        SELECT id, amount, category, date, description
+        FROM expenses
+        WHERE user_id = ?
+        ORDER BY date DESC, id DESC
+        LIMIT ?
+        """,
+        (user_id, limit),
+    ).fetchall()
+    conn.close()
+    return expenses

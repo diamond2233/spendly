@@ -1,9 +1,30 @@
 import os
+from datetime import datetime
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import check_password_hash
 
-from database.db import get_db, init_db, seed_db, create_user, get_user_by_email
+from database.db import (
+    get_db,
+    init_db,
+    seed_db,
+    create_user,
+    get_user_by_email,
+    get_user_by_id,
+    get_expense_summary_by_user,
+    get_recent_expenses_by_user,
+    get_category_totals_by_user,
+)
+
+CATEGORY_COLOR_CLASSES = [
+    "cat-color-0",
+    "cat-color-1",
+    "cat-color-2",
+    "cat-color-3",
+    "cat-color-4",
+    "cat-color-5",
+    "cat-color-6",
+]
 
 app = Flask(__name__)
 # Generated fresh at each startup — sessions reset on restart, which is
@@ -27,7 +48,7 @@ def landing():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if session.get("user_id"):
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -57,7 +78,7 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("user_id"):
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     if request.method == "POST":
         email = request.form.get("email", "").strip()
@@ -69,7 +90,7 @@ def login():
 
         session["user_id"] = user["id"]
         session["user_name"] = user["name"]
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     return render_template("login.html")
 
@@ -96,7 +117,34 @@ def privacy():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(user_id)
+    summary = get_expense_summary_by_user(user_id)
+    recent_expenses = get_recent_expenses_by_user(user_id)
+    category_totals = get_category_totals_by_user(user_id)
+    member_since = datetime.strptime(user["created_at"], "%Y-%m-%d %H:%M:%S").strftime("%B %Y")
+
+    top_category = category_totals[0]["category"] if category_totals else None
+    initials = "".join(part[0] for part in user["name"].split()[:2]).upper()
+    category_colors = {
+        row["category"]: CATEGORY_COLOR_CLASSES[i % len(CATEGORY_COLOR_CLASSES)]
+        for i, row in enumerate(category_totals)
+    }
+
+    return render_template(
+        "profile.html",
+        user=user,
+        summary=summary,
+        recent_expenses=recent_expenses,
+        category_totals=category_totals,
+        top_category=top_category,
+        category_colors=category_colors,
+        initials=initials,
+        member_since=member_since,
+    )
 
 
 @app.route("/expenses/add")
